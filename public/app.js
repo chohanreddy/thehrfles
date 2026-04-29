@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavScroll();
   loadStats();
   loadFeaturedFloats();
+  loadGhostReport();
   loadReviews();
   loadInsights();
   loadCompanySpotlight();
@@ -62,13 +63,56 @@ function countUp(id, target) {
   requestAnimationFrame(step);
 }
 
-/* === HERO FLOAT BADGES === */
+/* === HERO CARDS + FLOAT BADGES === */
 async function loadFeaturedFloats() {
-  const stats = await get('/api/stats');
+  const [stats, reviews] = await Promise.all([
+    get('/api/stats'),
+    get('/api/reviews?filter=recent'),
+  ]);
+
+  // Float badges
   const r = document.getElementById('hvf-reviews');
   const f = document.getElementById('hvf-flags');
   if (r) r.textContent = stats.reviewsFiled.toLocaleString();
   if (f) f.textContent = stats.redFlags.toLocaleString();
+
+  // Back card — worst rated
+  const worst = [...reviews].sort((a, b) => a.rating - b.rating)[0];
+  const back  = document.getElementById('hero-card-back');
+  if (back && worst) {
+    const rc = worst.rating < 2.5 ? 'bad' : worst.rating < 3.8 ? 'mid' : 'good';
+    back.innerHTML = `
+      <div class="hvc-cat">${esc(worst.category)}</div>
+      <div class="hvc-co">${esc(worst.company)}</div>
+      <div class="hvc-headline">"${esc(worst.headline)}"</div>
+      <div class="hvc-foot">
+        <span>${esc(worst.role)}</span>
+        <span class="hvc-badge ${rc}">${worst.rating.toFixed(1)}</span>
+      </div>`;
+  }
+
+  // Front card — most upvoted
+  const top   = [...reviews].sort((a, b) => b.upvotes - a.upvotes)[0];
+  const front = document.getElementById('hero-card-front');
+  if (front && top) {
+    const col = companyColor(top.company);
+    const rc  = top.rating < 2.5 ? 'bad' : top.rating < 3.8 ? 'mid' : 'good';
+    front.innerHTML = `
+      <div class="hvc-top">
+        <div class="hvc-avatar" style="background:${col}">${top.company[0]}</div>
+        <div>
+          <div class="hvc-cat">${esc(top.category)}</div>
+          <div class="hvc-co">${esc(top.company)}</div>
+        </div>
+        <span class="hvc-badge ${rc}">${top.rating.toFixed(1)}</span>
+      </div>
+      <div class="hvc-headline">"${esc(top.headline)}"</div>
+      <div class="hvc-body">${esc(top.body.slice(0, 120))}${top.body.length > 120 ? '…' : ''}</div>
+      <div class="hvc-foot">
+        <span class="hvc-verified">${top.verified ? '✓ Verified · ' : ''}${esc(top.role)}</span>
+        <span class="hvc-up">↑ ${top.upvotes}</span>
+      </div>`;
+  }
 }
 
 /* === REVIEWS === */
@@ -97,7 +141,10 @@ function renderReview(r, i = 0) {
     <div class="review-card ${border}" style="animation-delay:${Math.min(i,5)*70}ms">
       <div class="review-meta-top">
         <span class="review-category">${esc(r.category)}</span>
-        <span class="review-date">${timeAgo(r.date)}</span>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          ${isGhosted(r) ? '<span class="ghosted-badge">GHOSTED</span>' : ''}
+          <span class="review-date">${timeAgo(r.date)}</span>
+        </div>
       </div>
       <span class="review-company" onclick="filterByCompany('${esc(r.company)}')">${esc(r.company)}</span>
       <div class="review-headline">${esc(r.headline)}</div>
@@ -197,6 +244,56 @@ function doSearch() {
   showBanner(`Results for: "${q}"`);
   loadReviews();
   document.getElementById('reviews').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* === GHOST REPORT === */
+const GHOST_KEYWORDS = ['ghost', 'radio silence', 'no response', 'no reply', 'never heard', 'silence', 'disappeared', 'no follow', 'no email', 'no call', 'no feedback'];
+const isGhosted = r => {
+  const text = `${r.headline} ${r.body}`.toLowerCase();
+  return GHOST_KEYWORDS.some(k => text.includes(k)) || (r.category === 'Responsiveness' && r.rating < 2.5);
+};
+
+async function loadGhostReport() {
+  const data = await get('/api/ghost-report');
+
+  const total = document.getElementById('gs-total');
+  if (total) total.textContent = data.totalGhosted;
+
+  const offenderEl = document.getElementById('ghost-offender');
+  if (offenderEl && data.topOffender) {
+    const o = data.topOffender;
+    const latestHeadline = o.latestReview ? o.latestReview.headline : '';
+    offenderEl.innerHTML = `
+      <div class="go-header">
+        <span class="go-header-label">TOP OFFENDER THIS MONTH</span>
+        <span class="go-header-badge">#1</span>
+      </div>
+      <div class="go-body">
+        <div class="go-company">${esc(o.company)}</div>
+        <div class="go-industry">${esc(o.industry)}</div>
+        <div class="go-count-row">
+          <div class="go-count">${o.count}</div>
+          <div class="go-count-desc">candidates ghosted<br>after final round</div>
+        </div>
+        ${latestHeadline ? `<div class="go-headline">"${esc(latestHeadline)}"</div>` : ''}
+        <button class="go-view-btn" onclick="filterByCompany('${esc(o.company)}')">View all reviews →</button>
+      </div>`;
+  }
+
+  const storiesEl = document.getElementById('ghost-stories');
+  if (storiesEl && data.recentReviews && data.recentReviews.length) {
+    storiesEl.innerHTML = data.recentReviews.map(r => `
+      <div class="ghost-story-card">
+        <div class="gsc-left">
+          <div class="gsc-company">${esc(r.company)}</div>
+          <div class="gsc-headline">"${esc(r.headline)}"</div>
+          <div class="gsc-meta">${esc(r.role)} · ${timeAgo(r.date)}</div>
+        </div>
+        <span class="gsc-badge">GHOSTED</span>
+      </div>`).join('');
+  } else if (storiesEl) {
+    storiesEl.innerHTML = '<div class="loading-state">No recent reports.</div>';
+  }
 }
 
 /* === INSIGHTS === */

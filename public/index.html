@@ -16,6 +16,7 @@
     <a href="/" class="nav-logo">thehrfiles</a>
     <div class="nav-links">
       <a href="#reviews">Reviews</a>
+      <a href="#ghost-report" class="nav-ghost-link">Ghost Report</a>
       <a href="#leaderboard">Leaderboard</a>
       <a href="#redflags">Red Flags</a>
       <a href="#browse">Companies</a>
@@ -57,31 +58,8 @@
 
       <!-- Hero mockup visual -->
       <div class="hero-visual">
-        <div class="hv-card hv-card--back">
-          <div class="hvc-cat">INTERVIEW PROCESS</div>
-          <div class="hvc-co">Verdant Logistics</div>
-          <div class="hvc-headline">"Three rounds, then radio silence for two months."</div>
-          <div class="hvc-foot">
-            <span>Sr. Operations Lead</span>
-            <span class="hvc-badge bad">1.0</span>
-          </div>
-        </div>
-        <div class="hv-card hv-card--front">
-          <div class="hvc-top">
-            <div class="hvc-avatar" style="background:#1A7A4A">K</div>
-            <div>
-              <div class="hvc-cat">OVERALL HR</div>
-              <div class="hvc-co">Kestrel Software</div>
-            </div>
-            <span class="hvc-badge good">4.6</span>
-          </div>
-          <div class="hvc-headline">"First HR team in years that actually closed the loop."</div>
-          <div class="hvc-body">Got a thoughtful rejection email with specific feedback within 48 hours of the final round.</div>
-          <div class="hvc-foot">
-            <span class="hvc-verified">✓ Verified · Staff Engineer</span>
-            <span class="hvc-up">↑ 91</span>
-          </div>
-        </div>
+        <div class="hv-card hv-card--back" id="hero-card-back"></div>
+        <div class="hv-card hv-card--front" id="hero-card-front"></div>
         <div class="hv-float hv-float-1">
           <div class="hvf-num" id="hvf-reviews">2,693</div>
           <div class="hvf-label">reviews filed</div>
@@ -125,6 +103,50 @@
       <div class="stat-card">
         <div class="sc-num">2.4</div>
         <div class="sc-label">Avg HR rating</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GHOST REPORT -->
+  <section class="ghost-section" id="ghost-report">
+    <div class="container">
+      <div class="ghost-top">
+        <div class="ghost-alert-pill">
+          <span class="ghost-dot"></span>
+          GHOST REPORT · LIVE
+        </div>
+        <h2 class="ghost-title">Who's ghosting candidates<br>right now?</h2>
+        <p class="ghost-sub">Final rounds completed. Offers promised. Then nothing — no email, no call, no closure. These are the companies doing it.</p>
+      </div>
+
+      <div class="ghost-body">
+        <!-- Top offender -->
+        <div class="ghost-offender" id="ghost-offender">
+          <div class="loading-state">Loading…</div>
+        </div>
+
+        <!-- Right col: stats + recent stories -->
+        <div class="ghost-right">
+          <div class="ghost-stats-row">
+            <div class="ghost-stat">
+              <div class="ghost-stat-num" id="gs-total">—</div>
+              <div class="ghost-stat-label">ghosted after final round<br>this month</div>
+            </div>
+            <div class="ghost-stat">
+              <div class="ghost-stat-num">8 wks</div>
+              <div class="ghost-stat-label">longest reported<br>silence this month</div>
+            </div>
+          </div>
+
+          <div class="ghost-stories" id="ghost-stories">
+            <div class="loading-state">Loading…</div>
+          </div>
+
+          <div class="ghost-cta-row">
+            <p>Were you ghosted after a final round?</p>
+            <button class="ghost-report-btn" onclick="openModal()">Report it →</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>

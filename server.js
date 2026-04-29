@@ -83,6 +83,38 @@ app.get('/api/company-profiles', (req, res) => {
   res.json(profiles);
 });
 
+app.get('/api/ghost-report', (req, res) => {
+  const data = loadData();
+
+  const GHOST_KEYWORDS = ['ghost', 'radio silence', 'no response', 'no reply', 'never heard', 'silence', 'disappeared', 'nothing', 'no follow', 'no email', 'no call', 'no feedback'];
+
+  const isGhost = r => {
+    const text = `${r.headline} ${r.body}`.toLowerCase();
+    const flagged = r.redFlags && r.redFlags.includes('Ghosted after final round');
+    const keyword = GHOST_KEYWORDS.some(k => text.includes(k));
+    const lowResponsive = r.category === 'Responsiveness' && r.rating < 2.5;
+    return flagged || keyword || lowResponsive;
+  };
+
+  const ghostReviews = data.reviews.filter(isGhost).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const byCompany = {};
+  ghostReviews.forEach(r => {
+    if (!byCompany[r.company]) byCompany[r.company] = { company: r.company, industry: r.industry, count: 0, latestReview: r };
+    byCompany[r.company].count++;
+  });
+
+  const ghostFlag = data.redFlags.find(f => f.flag === 'Ghosted after final round');
+  const offenders = Object.values(byCompany).sort((a, b) => b.count - a.count);
+
+  res.json({
+    totalGhosted: ghostFlag ? ghostFlag.count : ghostReviews.length,
+    topOffender: offenders[0] || null,
+    offenders: offenders.slice(0, 5),
+    recentReviews: ghostReviews.slice(0, 3),
+  });
+});
+
 app.get('/api/insights', (req, res) => {
   const data = loadData();
   const categories = {};
