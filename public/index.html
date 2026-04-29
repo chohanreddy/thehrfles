@@ -408,7 +408,7 @@
 
         <form id="review-form" onsubmit="submitReview(event)">
           <div class="form-step" id="step-1">
-            <div class="step-label">Step 1 of 7 — Company</div>
+            <div class="step-label">Step 1 of 7: Company</div>
             <label>Company name *</label>
             <input type="text" id="f-company" placeholder="e.g. Marrow Health Systems" required list="company-list" />
             <datalist id="company-list"></datalist>
@@ -424,11 +424,11 @@
           </div>
 
           <div class="form-step hidden" id="step-2">
-            <div class="step-label">Step 2 of 7 — Your role</div>
-            <label>Position applied for *</label>
-            <input type="text" id="f-role" placeholder="e.g. Senior Engineer" required />
-            <label>Relationship to company *</label>
-            <select id="f-type" required>
+            <div class="step-label">Step 2 of 7: Your role</div>
+            <label>Position applied for <span class="optional-label">(optional)</span></label>
+            <input type="text" id="f-role" placeholder="e.g. Senior Engineer" />
+            <label>Relationship to company <span class="optional-label">(optional)</span></label>
+            <select id="f-type">
               <option value="">Select…</option>
               <option>Interview candidate</option>
               <option>Offer recipient</option>
@@ -439,7 +439,7 @@
           </div>
 
           <div class="form-step hidden" id="step-3">
-            <div class="step-label">Step 3 of 7 — Category</div>
+            <div class="step-label">Step 3 of 7: Category</div>
             <label>What are you reviewing? *</label>
             <div class="cat-grid" id="f-category-grid">
               <button type="button" class="cat-btn" data-val="Interview Process">
@@ -464,7 +464,7 @@
           </div>
 
           <div class="form-step hidden" id="step-4">
-            <div class="step-label">Step 4 of 7 — Headline</div>
+            <div class="step-label">Step 4 of 7: Headline</div>
             <label>One-line summary *</label>
             <input type="text" id="f-headline" placeholder="Capture what happened in one sentence" maxlength="120" required />
             <div class="char-count" id="char-count">120 characters remaining</div>
@@ -472,14 +472,14 @@
           </div>
 
           <div class="form-step hidden" id="step-5">
-            <div class="step-label">Step 5 of 7 — Full account</div>
+            <div class="step-label">Step 5 of 7: Full account</div>
             <label>What happened? *</label>
-            <textarea id="f-body" rows="6" placeholder="Be specific — number of rounds, timelines, what was said. Avoid individual names." required></textarea>
+            <textarea id="f-body" rows="6" placeholder="Be specific: number of rounds, timelines, what was said. Avoid individual names." required></textarea>
             <button type="button" class="step-btn" onclick="nextStep(5)">Continue →</button>
           </div>
 
           <div class="form-step hidden" id="step-6">
-            <div class="step-label">Step 6 of 7 — Rating</div>
+            <div class="step-label">Step 6 of 7: Rating</div>
             <label>Overall HR rating *</label>
             <div class="rating-widget">
               <div class="rating-big" id="rating-display">3.0</div>
@@ -490,7 +490,7 @@
           </div>
 
           <div class="form-step hidden" id="step-7">
-            <div class="step-label">Step 7 of 7 — Red flags</div>
+            <div class="step-label">Step 7 of 7: Red flags</div>
             <label>Flag specific behaviors (optional)</label>
             <div class="rf-check-list">
               <label class="rf-check"><input type="checkbox" value="Ghosted after final round" /><span>Ghosted after final round</span></label>

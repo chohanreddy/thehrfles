@@ -1,175 +1,300 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const pool = require('./db');
 
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
-app.use(express.json());
+// Security headers
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// CORS — only allow same origin
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || origin === `http://localhost:${PORT}`) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  next();
+});
+
+app.use(express.json({ limit: '20kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-function loadData() {
-  return JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'reviews.json'), 'utf8'));
+// Rate limiter for write endpoints
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Input validation helper
+function validateReview(body) {
+  const { company, industry, category, headline, body: text, role, type, rating } = body;
+  const validCategories = ['Interview Process', 'Responsiveness', 'Offer Stage', 'Overall HR'];
+  const validTypes = ['Interview candidate', 'Offer recipient', 'Former employee', 'Current employee'];
+
+  if (!company || typeof company !== 'string' || company.trim().length < 2) return 'Invalid company name';
+  if (!industry || typeof industry !== 'string') return 'Invalid industry';
+  if (!validCategories.includes(category)) return 'Invalid category';
+  if (!headline || typeof headline !== 'string' || headline.trim().length < 5) return 'Headline too short';
+  if (!text || typeof text !== 'string' || text.trim().length < 20) return 'Review body too short';
+  if (role && typeof role === 'string' && role.trim().length > 0 && role.trim().length < 2) return 'Invalid role';
+  if (type && !validTypes.includes(type)) return 'Invalid type';
+  const r = parseFloat(rating);
+  if (isNaN(r) || r < 1 || r > 5) return 'Rating must be between 1 and 5';
+  return null;
 }
 
-app.get('/api/stats', (req, res) => {
-  const data = loadData();
-  res.json(data.stats);
-});
-
-app.get('/api/reviews', (req, res) => {
-  const data = loadData();
-  const { filter, company, industry, q } = req.query;
-  let reviews = [...data.reviews];
-
-  if (q) {
-    const query = q.toLowerCase();
-    reviews = reviews.filter(r =>
-      r.company.toLowerCase().includes(query) ||
-      r.industry.toLowerCase().includes(query) ||
-      r.headline.toLowerCase().includes(query)
-    );
+// GET /api/stats — computed from DB
+app.get('/api/stats', async (req, res) => {
+  try {
+    const [companiesRes, reviewsRes, avgRes] = await Promise.all([
+      pool.query('SELECT COUNT(*) FROM companies'),
+      pool.query('SELECT COUNT(*) FROM reviews'),
+      pool.query('SELECT ROUND(AVG(rating)::numeric, 1) as avg FROM reviews'),
+    ]);
+    res.json({
+      companies: parseInt(companiesRes.rows[0].count),
+      reviewsFiled: parseInt(reviewsRes.rows[0].count),
+      avgRating: parseFloat(avgRes.rows[0].avg) || 0,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
   }
-  if (company) reviews = reviews.filter(r => r.company.toLowerCase() === company.toLowerCase());
-  if (industry) reviews = reviews.filter(r => r.industry.toLowerCase() === industry.toLowerCase());
-
-  if (filter === 'worst') reviews.sort((a, b) => a.rating - b.rating);
-  else if (filter === 'best') reviews.sort((a, b) => b.rating - a.rating);
-  else if (filter === 'flagged') reviews.sort((a, b) => b.flags - a.flags);
-  else reviews.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  res.json(reviews);
 });
 
-app.get('/api/leaderboards', (req, res) => {
-  const data = loadData();
-  res.json(data.leaderboards);
-});
+// GET /api/reviews
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const { filter, company, industry, q } = req.query;
 
-app.get('/api/redflags', (req, res) => {
-  const data = loadData();
-  res.json(data.redFlags);
-});
+    let where = [];
+    let params = [];
+    let i = 1;
 
-app.get('/api/companies', (req, res) => {
-  const data = loadData();
-  res.json(data.companies);
-});
-
-app.get('/api/company-profiles', (req, res) => {
-  const data = loadData();
-  const map = {};
-
-  data.reviews.forEach(r => {
-    if (!map[r.company]) {
-      map[r.company] = { company: r.company, industry: r.industry, reviews: [], totalRating: 0 };
+    if (q) {
+      where.push(`(c.name ILIKE $${i} OR c.industry ILIKE $${i} OR r.headline ILIKE $${i})`);
+      params.push(`%${q}%`);
+      i++;
     }
-    map[r.company].reviews.push(r);
-    map[r.company].totalRating += r.rating;
-  });
+    if (company) {
+      where.push(`LOWER(c.name) = LOWER($${i})`);
+      params.push(company);
+      i++;
+    }
+    if (industry) {
+      where.push(`LOWER(c.industry) = LOWER($${i})`);
+      params.push(industry);
+      i++;
+    }
 
-  const profiles = Object.values(map).map(p => {
-    const sorted = [...p.reviews].sort((a, b) => b.upvotes - a.upvotes);
-    return {
-      company: p.company,
-      industry: p.industry,
-      reviewCount: p.reviews.length,
-      avgRating: Math.round((p.totalRating / p.reviews.length) * 10) / 10,
-      topReview: sorted[0],
-      totalFlags: p.reviews.reduce((sum, r) => sum + r.flags, 0),
+    const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
+
+    const orderMap = {
+      worst: 'r.rating ASC',
+      best: 'r.rating DESC',
+      flagged: 'r.flags DESC',
     };
-  }).sort((a, b) => b.reviewCount - a.reviewCount);
+    const order = orderMap[filter] || 'r.date DESC';
 
-  res.json(profiles);
+    const sql = `
+      SELECT r.id, c.name AS company, c.industry, r.category, r.headline, r.body,
+             r.role, r.type, r.rating, r.verified, r.flags, r.upvotes, r.date
+      FROM reviews r
+      JOIN companies c ON r.company_id = c.id
+      ${whereClause}
+      ORDER BY ${order}
+    `;
+
+    const { rows } = await pool.query(sql, params);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-app.get('/api/ghost-report', (req, res) => {
-  const data = loadData();
-
-  const GHOST_KEYWORDS = ['ghost', 'radio silence', 'no response', 'no reply', 'never heard', 'silence', 'disappeared', 'nothing', 'no follow', 'no email', 'no call', 'no feedback'];
-
-  const isGhost = r => {
-    const text = `${r.headline} ${r.body}`.toLowerCase();
-    const flagged = r.redFlags && r.redFlags.includes('Ghosted after final round');
-    const keyword = GHOST_KEYWORDS.some(k => text.includes(k));
-    const lowResponsive = r.category === 'Responsiveness' && r.rating < 2.5;
-    return flagged || keyword || lowResponsive;
-  };
-
-  const ghostReviews = data.reviews.filter(isGhost).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const byCompany = {};
-  ghostReviews.forEach(r => {
-    if (!byCompany[r.company]) byCompany[r.company] = { company: r.company, industry: r.industry, count: 0, latestReview: r };
-    byCompany[r.company].count++;
-  });
-
-  const ghostFlag = data.redFlags.find(f => f.flag === 'Ghosted after final round');
-  const offenders = Object.values(byCompany).sort((a, b) => b.count - a.count);
-
-  res.json({
-    totalGhosted: ghostFlag ? ghostFlag.count : ghostReviews.length,
-    topOffender: offenders[0] || null,
-    offenders: offenders.slice(0, 5),
-    recentReviews: ghostReviews.slice(0, 3),
-  });
+// GET /api/companies
+app.get('/api/companies', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT name, industry FROM companies ORDER BY name');
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-app.get('/api/insights', (req, res) => {
-  const data = loadData();
-  const categories = {};
-  const industries = {};
+// GET /api/company-profiles
+app.get('/api/company-profiles', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        c.name AS company,
+        c.industry,
+        COUNT(r.id) AS "reviewCount",
+        ROUND(AVG(r.rating)::numeric, 1) AS "avgRating",
+        SUM(r.flags) AS "totalFlags"
+      FROM companies c
+      LEFT JOIN reviews r ON r.company_id = c.id
+      GROUP BY c.id, c.name, c.industry
+      ORDER BY COUNT(r.id) DESC
+    `);
 
-  data.reviews.forEach(r => {
-    if (!categories[r.category]) categories[r.category] = { count: 0, totalRating: 0 };
-    categories[r.category].count++;
-    categories[r.category].totalRating += r.rating;
+    const profiles = await Promise.all(rows.map(async (p) => {
+      const { rows: topRows } = await pool.query(`
+        SELECT r.id, c.name AS company, c.industry, r.category, r.headline, r.body,
+               r.role, r.type, r.rating, r.verified, r.flags, r.upvotes, r.date
+        FROM reviews r JOIN companies c ON r.company_id = c.id
+        WHERE c.name = $1 ORDER BY r.upvotes DESC LIMIT 1
+      `, [p.company]);
+      return { ...p, reviewCount: parseInt(p.reviewCount), totalFlags: parseInt(p.totalFlags), topReview: topRows[0] || null };
+    }));
 
-    if (!industries[r.industry]) industries[r.industry] = { count: 0, totalRating: 0 };
-    industries[r.industry].count++;
-    industries[r.industry].totalRating += r.rating;
-  });
-
-  const categoryBreakdown = Object.entries(categories).map(([name, d]) => ({
-    name,
-    count: d.count,
-    avgRating: Math.round((d.totalRating / d.count) * 10) / 10,
-  })).sort((a, b) => b.count - a.count);
-
-  const industryBreakdown = Object.entries(industries).map(([name, d]) => ({
-    name,
-    count: d.count,
-    avgRating: Math.round((d.totalRating / d.count) * 10) / 10,
-  })).sort((a, b) => a.avgRating - b.avgRating);
-
-  res.json({ categoryBreakdown, industryBreakdown });
+    res.json(profiles);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-app.post('/api/reviews', (req, res) => {
-  const data = loadData();
-  const review = {
-    id: Date.now(),
-    ...req.body,
-    date: new Date().toISOString(),
-    upvotes: 0,
-    flags: 0,
-    verified: false,
-  };
-  data.reviews.unshift(review);
-  data.stats.reviewsFiled += 1;
-  fs.writeFileSync(path.join(__dirname, 'data', 'reviews.json'), JSON.stringify(data, null, 2));
-  res.json({ success: true, review });
+// GET /api/leaderboards — computed from real data
+app.get('/api/leaderboards', async (req, res) => {
+  try {
+    const [worstRes, bestRes] = await Promise.all([
+      pool.query(`
+        SELECT c.name AS company, c.industry,
+               COUNT(r.id) AS reviews,
+               ROUND(AVG(r.rating)::numeric, 1) AS rating
+        FROM reviews r JOIN companies c ON r.company_id = c.id
+        GROUP BY c.id, c.name, c.industry
+        HAVING COUNT(r.id) > 0
+        ORDER BY AVG(r.rating) ASC LIMIT 5
+      `),
+      pool.query(`
+        SELECT c.name AS company, c.industry,
+               COUNT(r.id) AS reviews,
+               ROUND(AVG(r.rating)::numeric, 1) AS rating
+        FROM reviews r JOIN companies c ON r.company_id = c.id
+        GROUP BY c.id, c.name, c.industry
+        HAVING COUNT(r.id) > 0
+        ORDER BY AVG(r.rating) DESC LIMIT 5
+      `),
+    ]);
+
+    const rank = (rows) => rows.map((r, i) => ({ rank: i + 1, ...r, reviews: parseInt(r.reviews), rating: parseFloat(r.rating) }));
+    res.json({ worst: rank(worstRes.rows), best: rank(bestRes.rows) });
+  } catch (e) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-app.post('/api/reviews/:id/upvote', (req, res) => {
-  const data = loadData();
-  const review = data.reviews.find(r => r.id === parseInt(req.params.id));
-  if (review) {
-    review.upvotes += 1;
-    fs.writeFileSync(path.join(__dirname, 'data', 'reviews.json'), JSON.stringify(data, null, 2));
-    res.json({ upvotes: review.upvotes });
-  } else {
-    res.status(404).json({ error: 'Review not found' });
+// GET /api/ghost-report
+app.get('/api/ghost-report', async (req, res) => {
+  try {
+    const GHOST_KEYWORDS = ['ghost', 'radio silence', 'no response', 'no reply', 'never heard', 'silence', 'disappeared', 'nothing', 'no follow', 'no email', 'no call', 'no feedback'];
+    const keywordSQL = GHOST_KEYWORDS.map(k => `(LOWER(r.headline) LIKE '%${k}%' OR LOWER(r.body) LIKE '%${k}%')`).join(' OR ');
+
+    const { rows: ghostRows } = await pool.query(`
+      SELECT r.id, c.name AS company, c.industry, r.category, r.headline, r.body,
+             r.role, r.type, r.rating, r.verified, r.flags, r.upvotes, r.date
+      FROM reviews r JOIN companies c ON r.company_id = c.id
+      WHERE (r.category = 'Responsiveness' AND r.rating < 2.5)
+         OR (${keywordSQL})
+      ORDER BY r.date DESC
+    `);
+
+    const byCompany = {};
+    ghostRows.forEach(r => {
+      if (!byCompany[r.company]) byCompany[r.company] = { company: r.company, industry: r.industry, count: 0, latestReview: r };
+      byCompany[r.company].count++;
+    });
+
+    const offenders = Object.values(byCompany).sort((a, b) => b.count - a.count);
+    res.json({
+      totalGhosted: ghostRows.length,
+      topOffender: offenders[0] || null,
+      offenders: offenders.slice(0, 5),
+      recentReviews: ghostRows.slice(0, 3),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/insights
+app.get('/api/insights', async (req, res) => {
+  try {
+    const [catRes, indRes] = await Promise.all([
+      pool.query(`
+        SELECT r.category AS name, COUNT(*) AS count, ROUND(AVG(r.rating)::numeric,1) AS "avgRating"
+        FROM reviews r GROUP BY r.category ORDER BY COUNT(*) DESC
+      `),
+      pool.query(`
+        SELECT c.industry AS name, COUNT(*) AS count, ROUND(AVG(r.rating)::numeric,1) AS "avgRating"
+        FROM reviews r JOIN companies c ON r.company_id = c.id
+        GROUP BY c.industry ORDER BY AVG(r.rating) ASC
+      `),
+    ]);
+
+    res.json({
+      categoryBreakdown: catRes.rows.map(r => ({ ...r, count: parseInt(r.count), avgRating: parseFloat(r.avgRating) })),
+      industryBreakdown: indRes.rows.map(r => ({ ...r, count: parseInt(r.count), avgRating: parseFloat(r.avgRating) })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/reviews
+app.post('/api/reviews', writeLimiter, async (req, res) => {
+  const err = validateReview(req.body);
+  if (err) return res.status(400).json({ error: err });
+
+  const { company, industry, category, headline, body: text, role, type, rating } = req.body;
+
+  try {
+    await pool.query(
+      'INSERT INTO companies (name, industry) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING',
+      [company.trim(), industry.trim()]
+    );
+
+    const { rows } = await pool.query('SELECT id FROM companies WHERE name = $1', [company.trim()]);
+    const companyId = rows[0].id;
+
+    const { rows: inserted } = await pool.query(
+      `INSERT INTO reviews (id, company_id, category, headline, body, role, type, rating, verified, flags, upvotes, date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,0,0,NOW()) RETURNING *`,
+      [Date.now(), companyId, category, headline.trim(), text.trim(), role ? role.trim() : null, type || null, parseFloat(rating)]
+    );
+
+    res.json({ success: true, review: inserted[0] });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/reviews/:id/upvote
+app.post('/api/reviews/:id/upvote', writeLimiter, async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid review ID' });
+
+  try {
+    const { rows } = await pool.query(
+      'UPDATE reviews SET upvotes = upvotes + 1 WHERE id = $1 RETURNING upvotes',
+      [id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Review not found' });
+    res.json({ upvotes: rows[0].upvotes });
+  } catch (e) {
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

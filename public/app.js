@@ -76,7 +76,7 @@ async function loadFeaturedFloats() {
   if (r) r.textContent = stats.reviewsFiled.toLocaleString();
   if (f) f.textContent = stats.redFlags.toLocaleString();
 
-  // Back card — worst rated
+  // Back card: worst rated
   const worst = [...reviews].sort((a, b) => a.rating - b.rating)[0];
   const back  = document.getElementById('hero-card-back');
   if (back && worst) {
@@ -91,7 +91,7 @@ async function loadFeaturedFloats() {
       </div>`;
   }
 
-  // Front card — most upvoted
+  // Front card: most upvoted
   const top   = [...reviews].sort((a, b) => b.upvotes - a.upvotes)[0];
   const front = document.getElementById('hero-card-front');
   if (front && top) {
@@ -460,8 +460,7 @@ function validate(n) {
     if (!document.getElementById('f-industry').value)       { flash('f-industry'); return false; }
   }
   if (n === 2) {
-    if (!document.getElementById('f-role').value.trim()) { flash('f-role'); return false; }
-    if (!document.getElementById('f-type').value)        { flash('f-type'); return false; }
+    // optional step — no validation required
   }
   if (n === 3) {
     if (!document.getElementById('f-category').value) {
