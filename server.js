@@ -53,15 +53,34 @@ function validateReview(body) {
 // GET /api/stats — computed from DB
 app.get('/api/stats', async (req, res) => {
   try {
-    const [companiesRes, reviewsRes, avgRes] = await Promise.all([
+    const [companiesRes, reviewsRes, avgRes, flagsRes, industriesRes, ghostRes] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM companies'),
       pool.query('SELECT COUNT(*) FROM reviews'),
       pool.query('SELECT ROUND(AVG(rating)::numeric, 1) as avg FROM reviews'),
+      pool.query('SELECT COALESCE(SUM(flags), 0) as total FROM reviews'),
+      pool.query('SELECT COUNT(DISTINCT industry) as total FROM companies'),
+      pool.query(`
+        SELECT r.body FROM reviews r
+        JOIN companies c ON r.company_id = c.id
+        WHERE r.category = 'Responsiveness' AND r.rating < 2.5
+           OR LOWER(r.headline) LIKE '%ghost%' OR LOWER(r.body) LIKE '%ghost%'
+           OR LOWER(r.body) LIKE '%weeks of nothing%' OR LOWER(r.body) LIKE '%radio silence%'
+      `),
     ]);
+
+    const weekMatches = ghostRes.rows.flatMap(r => {
+      const m = (r.body || '').match(/(\d+)\s*weeks?/gi) || [];
+      return m.map(x => parseInt(x));
+    });
+    const longestGhost = weekMatches.length ? Math.max(...weekMatches) : null;
+
     res.json({
       companies: parseInt(companiesRes.rows[0].count),
       reviewsFiled: parseInt(reviewsRes.rows[0].count),
       avgRating: parseFloat(avgRes.rows[0].avg) || 0,
+      totalFlags: parseInt(flagsRes.rows[0].total),
+      industries: parseInt(industriesRes.rows[0].total),
+      longestGhostWeeks: longestGhost,
     });
   } catch (e) {
     console.error(e);
@@ -113,7 +132,7 @@ app.get('/api/reviews', async (req, res) => {
     `;
 
     const { rows } = await pool.query(sql, params);
-    res.json(rows);
+    res.json(rows.map(r => ({ ...r, rating: parseFloat(r.rating), upvotes: parseInt(r.upvotes), flags: parseInt(r.flags) })));
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Server error' });
@@ -257,7 +276,8 @@ app.post('/api/reviews', writeLimiter, async (req, res) => {
   const err = validateReview(req.body);
   if (err) return res.status(400).json({ error: err });
 
-  const { company, industry, category, headline, body: text, role, type, rating } = req.body;
+  const { company, industry, category, headline, body: text, role, type, rating, redFlags } = req.body;
+  const flagCount = Array.isArray(redFlags) ? redFlags.length : 0;
 
   try {
     await pool.query(
@@ -270,8 +290,8 @@ app.post('/api/reviews', writeLimiter, async (req, res) => {
 
     const { rows: inserted } = await pool.query(
       `INSERT INTO reviews (id, company_id, category, headline, body, role, type, rating, verified, flags, upvotes, date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,0,0,NOW()) RETURNING *`,
-      [Date.now(), companyId, category, headline.trim(), text.trim(), role ? role.trim() : null, type || null, parseFloat(rating)]
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,$9,0,NOW()) RETURNING *`,
+      [Date.now(), companyId, category, headline.trim(), text.trim(), role ? role.trim() : null, type || null, parseFloat(rating), flagCount]
     );
 
     res.json({ success: true, review: inserted[0] });

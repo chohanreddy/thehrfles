@@ -44,9 +44,19 @@ function initNavScroll() {
 /* === STATS === */
 async function loadStats() {
   const stats = await get('/api/stats');
-  countUp('stat-companies', stats.companies);
-  countUp('stat-reviews',   stats.reviewsFiled);
-  countUp('stat-flags',     stats.redFlags);
+  countUp('stat-companies',  stats.companies);
+  countUp('stat-reviews',    stats.reviewsFiled);
+  countUp('stat-flags',      stats.totalFlags);
+  countUp('stat-industries', stats.industries);
+
+  const avgEl = document.getElementById('stat-avg');
+  if (avgEl) avgEl.textContent = stats.avgRating.toFixed(1);
+
+  const heroCount = document.getElementById('hero-company-count');
+  if (heroCount) heroCount.textContent = `${stats.companies}+`;
+
+  const gsLongest = document.getElementById('gs-longest');
+  if (gsLongest) gsLongest.textContent = stats.longestGhostWeeks ? `${stats.longestGhostWeeks} wks` : 'N/A';
 }
 
 function countUp(id, target) {
@@ -74,7 +84,7 @@ async function loadFeaturedFloats() {
   const r = document.getElementById('hvf-reviews');
   const f = document.getElementById('hvf-flags');
   if (r) r.textContent = stats.reviewsFiled.toLocaleString();
-  if (f) f.textContent = stats.redFlags.toLocaleString();
+  if (f) f.textContent = (stats.totalFlags || 0).toLocaleString();
 
   // Back card: worst rated
   const worst = [...reviews].sort((a, b) => a.rating - b.rating)[0];
@@ -86,7 +96,7 @@ async function loadFeaturedFloats() {
       <div class="hvc-co">${esc(worst.company)}</div>
       <div class="hvc-headline">"${esc(worst.headline)}"</div>
       <div class="hvc-foot">
-        <span>${esc(worst.role)}</span>
+        <span>${esc(worst.role || 'Anonymous')}</span>
         <span class="hvc-badge ${rc}">${worst.rating.toFixed(1)}</span>
       </div>`;
   }
@@ -109,7 +119,7 @@ async function loadFeaturedFloats() {
       <div class="hvc-headline">"${esc(top.headline)}"</div>
       <div class="hvc-body">${esc(top.body.slice(0, 120))}${top.body.length > 120 ? '…' : ''}</div>
       <div class="hvc-foot">
-        <span class="hvc-verified">${top.verified ? '✓ Verified · ' : ''}${esc(top.role)}</span>
+        <span class="hvc-verified">${top.verified ? '✓ Verified · ' : ''}${esc(top.role || 'Anonymous')}</span>
         <span class="hvc-up">↑ ${top.upvotes}</span>
       </div>`;
   }
@@ -369,12 +379,11 @@ function renderLB(id, rows, dir) {
         <div class="lb-rank">${String(r.rank).padStart(2,'0')}</div>
         <div class="lb-info">
           <div class="lb-company">${esc(r.company)}</div>
-          <div class="lb-meta">${esc(r.industry)} · ${r.reviews} reviews</div>
+          <div class="lb-meta">${esc(r.industry)} · ${r.reviews} ${r.reviews == 1 ? 'review' : 'reviews'}</div>
           <div class="lb-bar-track">
             <div class="lb-bar-fill ${fc}" style="width:${pct}%"></div>
           </div>
         </div>
-        <div class="lb-change ${dir}">${dir==='down'?'▼':'▲'} ${Math.abs(r.change).toFixed(1)}</div>
         <span class="rating-badge ${rc}">${r.rating.toFixed(1)}</span>
       </div>`;
   }).join('');
@@ -519,8 +528,17 @@ async function submitReview(e) {
   document.getElementById('review-form').classList.add('hidden');
   document.getElementById('review-success').classList.remove('hidden');
   setProgress(7);
-  loadReviews();
-  loadStats();
+
+  await Promise.all([
+    loadStats(),
+    loadReviews(),
+    loadFeaturedFloats(),
+    loadLeaderboards(),
+    loadGhostReport(),
+    loadInsights(),
+    loadCompanySpotlight(),
+    loadCompanies(),
+  ]);
 }
 
 /* === SCROLL REVEAL === */
