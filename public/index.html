@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The HR Files — Look up an HR team before they look up you.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <a href="/" class="nav-logo">thehrfiles</a>
+    <div class="nav-links">
+      <a href="#reviews">Reviews</a>
+      <a href="#leaderboard">Leaderboard</a>
+      <a href="#redflags">Red Flags</a>
+      <a href="#browse">Companies</a>
+    </div>
+    <button class="nav-cta" onclick="openModal()">Write a Review <span class="arrow">→</span></button>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-bg-dots"></div>
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="hero-tag">
+          <span class="tag-dot"></span>
+          <span>Independent · Candidate-sourced · Ad-free</span>
+        </div>
+        <h1 class="hero-title">
+          Look up an HR team<br>
+          <em>before</em> they look up you.
+        </h1>
+        <p class="hero-sub">Anonymous reviews of <strong>15+ HR teams</strong> — from response time to whether they ghost you after the final round.</p>
+
+        <div class="hero-search">
+          <div class="hs-box">
+            <svg class="hs-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="search-input" placeholder="Search a company or industry…" autocomplete="off" />
+            <button class="hs-btn" onclick="doSearch()">Search</button>
+          </div>
+          <div id="search-suggestions" class="search-suggestions hidden"></div>
+          <div class="hero-trending">
+            <span>Trending:</span>
+            <button class="trend-pill" onclick="filterByCompany('Verdant Logistics')">Verdant Logistics</button>
+            <button class="trend-pill" onclick="filterByCompany('Marrow Health Systems')">Marrow Health</button>
+            <button class="trend-pill" onclick="filterByCompany('Atlas & Mercer')">Atlas &amp; Mercer</button>
+            <button class="trend-pill" onclick="filterByCompany('Northbridge Capital')">Northbridge Capital</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero mockup visual -->
+      <div class="hero-visual">
+        <div class="hv-card hv-card--back">
+          <div class="hvc-cat">INTERVIEW PROCESS</div>
+          <div class="hvc-co">Verdant Logistics</div>
+          <div class="hvc-headline">"Three rounds, then radio silence for two months."</div>
+          <div class="hvc-foot">
+            <span>Sr. Operations Lead</span>
+            <span class="hvc-badge bad">1.0</span>
+          </div>
+        </div>
+        <div class="hv-card hv-card--front">
+          <div class="hvc-top">
+            <div class="hvc-avatar" style="background:#1A7A4A">K</div>
+            <div>
+              <div class="hvc-cat">OVERALL HR</div>
+              <div class="hvc-co">Kestrel Software</div>
+            </div>
+            <span class="hvc-badge good">4.6</span>
+          </div>
+          <div class="hvc-headline">"First HR team in years that actually closed the loop."</div>
+          <div class="hvc-body">Got a thoughtful rejection email with specific feedback within 48 hours of the final round.</div>
+          <div class="hvc-foot">
+            <span class="hvc-verified">✓ Verified · Staff Engineer</span>
+            <span class="hvc-up">↑ 91</span>
+          </div>
+        </div>
+        <div class="hv-float hv-float-1">
+          <div class="hvf-num" id="hvf-reviews">2,693</div>
+          <div class="hvf-label">reviews filed</div>
+        </div>
+        <div class="hv-float hv-float-2">
+          <div class="hvf-flag">⚑</div>
+          <div>
+            <div class="hvf-num2" id="hvf-flags">599</div>
+            <div class="hvf-label">red flags</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll cue -->
+    <div class="scroll-cue">
+      <span>Scroll to explore</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- STATS STRIP -->
+  <section class="stats-section">
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="sc-num" id="stat-companies">15</div>
+        <div class="sc-label">Companies tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-num" id="stat-reviews">2,693</div>
+        <div class="sc-label">Reviews filed</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-num" id="stat-flags">599</div>
+        <div class="sc-label">Red flags raised</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-num">11</div>
+        <div class="sc-label">Industries covered</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-num">2.4</div>
+        <div class="sc-label">Avg HR rating</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section">
+    <div class="container">
+      <div class="section-tag">HOW IT WORKS</div>
+      <h2 class="section-title">Research the process<br>before you're in it.</h2>
+      <div class="how-grid">
+        <div class="how-card reveal">
+          <div class="how-num">01</div>
+          <div class="how-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <h3>Search before you apply</h3>
+          <p>Look up any company by name or industry. See their HR rating, which red flags have been filed, and how they treat candidates at every stage.</p>
+        </div>
+        <div class="how-card reveal reveal-d1">
+          <div class="how-num">02</div>
+          <div class="how-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <h3>Read what actually happened</h3>
+          <p>Anonymous, verified accounts from real candidates. No employer responses, no paid placements. Just what happened, in their own words.</p>
+        </div>
+        <div class="how-card reveal reveal-d2">
+          <div class="how-num">03</div>
+          <div class="how-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <h3>File your own account</h3>
+          <p>After your process ends — offer, rejection, or radio silence — spend 6 minutes filing a review. You help the next person who sits across that table.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEWS -->
+  <section class="reviews-section" id="reviews">
+    <div class="container">
+      <div class="reviews-header">
+        <div>
+          <div class="section-tag">TRENDING · LAST 7 DAYS</div>
+          <h2 class="section-title" style="margin-bottom:0">What candidates are saying.</h2>
+        </div>
+        <button class="ghost-btn" onclick="openModal()">+ Write a review</button>
+      </div>
+
+      <div class="reviews-layout">
+        <div class="reviews-main">
+          <div class="filter-row">
+            <div class="filter-tabs">
+              <button class="tab active" onclick="setFilter(this,'recent')">All recent</button>
+              <button class="tab" onclick="setFilter(this,'worst')">Worst rated</button>
+              <button class="tab" onclick="setFilter(this,'best')">Highly rated</button>
+              <button class="tab" onclick="setFilter(this,'flagged')">Most flagged</button>
+            </div>
+            <div id="active-filter-banner" class="active-filter-banner hidden">
+              <span id="active-filter-text"></span>
+              <button onclick="clearFilter()">× Clear</button>
+            </div>
+          </div>
+          <div id="reviews-list" class="reviews-list">
+            <div class="loading-state">Loading reviews…</div>
+          </div>
+        </div>
+
+        <aside class="reviews-sidebar">
+          <div class="sidebar-card">
+            <div class="sidebar-title">BY CATEGORY</div>
+            <div id="category-breakdown"></div>
+          </div>
+          <div class="sidebar-card">
+            <div class="sidebar-title">MOST REVIEWED</div>
+            <div id="sidebar-companies"></div>
+          </div>
+          <div class="sidebar-card sidebar-cta-card">
+            <p>Experienced a poor HR process? Help the next candidate.</p>
+            <button class="full-btn" onclick="openModal()">Write a Review →</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPANY BROWSE -->
+  <section class="browse-section" id="browse">
+    <div class="container browse-header">
+      <div>
+        <div class="section-tag">COMPANY SPOTLIGHT</div>
+        <h2 class="section-title" style="margin-bottom:0">Browse by company.</h2>
+      </div>
+      <span class="scroll-hint-text">Scroll to explore →</span>
+    </div>
+    <div class="company-scroll" id="spotlight-scroll">
+      <div class="loading-state" style="padding:3rem 2.5rem">Loading…</div>
+    </div>
+  </section>
+
+  <!-- LEADERBOARDS -->
+  <section class="lb-section" id="leaderboard">
+    <div class="container">
+      <div class="lb-header">
+        <div class="section-tag">INDUSTRY LEADERBOARDS</div>
+        <h2 class="section-title">The best and the worst.</h2>
+      </div>
+      <div class="lb-grid">
+        <div class="lb-col">
+          <div class="lb-col-head shame">
+            <div class="lb-col-title">Hall of Shame</div>
+            <div class="lb-col-sub">Worst-rated HR teams</div>
+          </div>
+          <div id="lb-worst"></div>
+        </div>
+        <div class="lb-col">
+          <div class="lb-col-head praise">
+            <div class="lb-col-title">Worth Talking To</div>
+            <div class="lb-col-sub">Highest-rated HR teams</div>
+          </div>
+          <div id="lb-best"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- WHY IT MATTERS -->
+  <section class="why-section">
+    <div class="container">
+      <div class="section-tag light">WHY THIS EXISTS</div>
+      <h2 class="why-title">Candidates deserve the same<br>research tools companies use.</h2>
+
+      <div class="why-stats-row">
+        <div class="why-stat reveal">
+          <div class="why-big">67%</div>
+          <p>of candidates say a poor hiring experience caused them to lose interest in a role they originally wanted</p>
+        </div>
+        <div class="why-divider"></div>
+        <div class="why-stat reveal reveal-d1">
+          <div class="why-big">8 wks</div>
+          <p>average ghosting duration after a five-panel final round — our most-upvoted review this month</p>
+        </div>
+        <div class="why-divider"></div>
+        <div class="why-stat reveal reveal-d2">
+          <div class="why-big">1 in 5</div>
+          <p>written offers differ materially from the verbal offer that preceded them, per our offer-stage reviews</p>
+        </div>
+      </div>
+
+      <p class="why-body">Companies research candidates obsessively — background checks, employment verification, culture scoring. Candidates get a careers page and a Glassdoor score the company's PR team has gamed for years. We're closing the gap.</p>
+    </div>
+  </section>
+
+  <!-- RED FLAGS WALL -->
+  <section class="rf-section" id="redflags">
+    <div class="container">
+      <div class="section-tag">RED FLAGS WALL · THIS MONTH</div>
+      <h2 class="section-title">The most-cited behaviors<br>flagged in the last 30 days.</h2>
+      <div id="redflags-list" class="rf-grid"></div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-bg-accent"></div>
+    <div class="container cta-inner">
+      <div class="section-tag light">YOUR TURN</div>
+      <h2 class="cta-title">Got an HR story?<br>File it.</h2>
+      <p class="cta-sub">Anonymous by default. No email. No fingerprint. Takes about 6 minutes.</p>
+      <button class="cta-btn" onclick="openModal()">
+        Write a Review
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <div class="cta-meta">7 STEPS · ~6 MIN · FULLY ANONYMOUS</div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">The HR Files</div>
+        <p>Anonymous, candidate-sourced HR reviews. Independent and ad-free since 2026.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">EXPLORE</div>
+        <a href="#reviews">Browse Reviews</a>
+        <a href="#leaderboard">Leaderboard</a>
+        <a href="#redflags">Red Flags</a>
+        <a href="#browse">Companies</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">ABOUT</div>
+        <a href="#">Anonymity Policy</a>
+        <a href="#">Moderation</a>
+        <a href="#">Methodology</a>
+        <a href="#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">WEEKLY DIGEST</div>
+        <p class="footer-digest-sub">The most-flagged HR teams in your inbox.</p>
+        <div class="footer-email">
+          <input type="email" placeholder="your@email.com" />
+          <button onclick="subscribeEmail(this)">→</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 The HR Files</span>
+    </div>
+  </footer>
+
+  <!-- REVIEW MODAL -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal">
+      <div class="modal-progress"><div class="modal-bar" id="modal-bar"></div></div>
+      <div class="modal-body">
+        <button class="modal-close" onclick="closeModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <h2>File a Review</h2>
+        <p class="modal-sub">Anonymous · 7 steps · ~6 minutes</p>
+
+        <form id="review-form" onsubmit="submitReview(event)">
+          <div class="form-step" id="step-1">
+            <div class="step-label">Step 1 of 7 — Company</div>
+            <label>Company name *</label>
+            <input type="text" id="f-company" placeholder="e.g. Marrow Health Systems" required list="company-list" />
+            <datalist id="company-list"></datalist>
+            <label>Industry *</label>
+            <select id="f-industry" required>
+              <option value="">Select industry…</option>
+              <option>Biotech</option><option>Consulting</option><option>EdTech</option>
+              <option>Finance</option><option>Food & Beverage</option><option>Hardware</option>
+              <option>Healthcare</option><option>Logistics</option><option>Media</option>
+              <option>Retail</option><option>Software</option><option>Other</option>
+            </select>
+            <button type="button" class="step-btn" onclick="nextStep(1)">Continue →</button>
+          </div>
+
+          <div class="form-step hidden" id="step-2">
+            <div class="step-label">Step 2 of 7 — Your role</div>
+            <label>Position applied for *</label>
+            <input type="text" id="f-role" placeholder="e.g. Senior Engineer" required />
+            <label>Relationship to company *</label>
+            <select id="f-type" required>
+              <option value="">Select…</option>
+              <option>Interview candidate</option>
+              <option>Offer recipient</option>
+              <option>Former employee</option>
+              <option>Current employee</option>
+            </select>
+            <button type="button" class="step-btn" onclick="nextStep(2)">Continue →</button>
+          </div>
+
+          <div class="form-step hidden" id="step-3">
+            <div class="step-label">Step 3 of 7 — Category</div>
+            <label>What are you reviewing? *</label>
+            <div class="cat-grid" id="f-category-grid">
+              <button type="button" class="cat-btn" data-val="Interview Process">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Interview Process
+              </button>
+              <button type="button" class="cat-btn" data-val="Responsiveness">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Responsiveness
+              </button>
+              <button type="button" class="cat-btn" data-val="Offer Stage">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Offer Stage
+              </button>
+              <button type="button" class="cat-btn" data-val="Overall HR">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Overall HR
+              </button>
+            </div>
+            <input type="hidden" id="f-category" required />
+            <button type="button" class="step-btn" onclick="nextStep(3)">Continue →</button>
+          </div>
+
+          <div class="form-step hidden" id="step-4">
+            <div class="step-label">Step 4 of 7 — Headline</div>
+            <label>One-line summary *</label>
+            <input type="text" id="f-headline" placeholder="Capture what happened in one sentence" maxlength="120" required />
+            <div class="char-count" id="char-count">120 characters remaining</div>
+            <button type="button" class="step-btn" onclick="nextStep(4)">Continue →</button>
+          </div>
+
+          <div class="form-step hidden" id="step-5">
+            <div class="step-label">Step 5 of 7 — Full account</div>
+            <label>What happened? *</label>
+            <textarea id="f-body" rows="6" placeholder="Be specific — number of rounds, timelines, what was said. Avoid individual names." required></textarea>
+            <button type="button" class="step-btn" onclick="nextStep(5)">Continue →</button>
+          </div>
+
+          <div class="form-step hidden" id="step-6">
+            <div class="step-label">Step 6 of 7 — Rating</div>
+            <label>Overall HR rating *</label>
+            <div class="rating-widget">
+              <div class="rating-big" id="rating-display">3.0</div>
+              <input type="range" id="f-rating" min="1" max="5" step="0.1" value="3" oninput="updateRatingDisplay(this.value)" />
+              <div class="rating-labels"><span>Poor (1)</span><span>Excellent (5)</span></div>
+            </div>
+            <button type="button" class="step-btn" onclick="nextStep(6)">Continue →</button>
+          </div>
+
+          <div class="form-step hidden" id="step-7">
+            <div class="step-label">Step 7 of 7 — Red flags</div>
+            <label>Flag specific behaviors (optional)</label>
+            <div class="rf-check-list">
+              <label class="rf-check"><input type="checkbox" value="Ghosted after final round" /><span>Ghosted after final round</span></label>
+              <label class="rf-check"><input type="checkbox" value="Bait-and-switch on offer comp" /><span>Bait-and-switch on comp</span></label>
+              <label class="rf-check"><input type="checkbox" value="Excessive unpaid take-home" /><span>Excessive unpaid take-home</span></label>
+              <label class="rf-check"><input type="checkbox" value="Pre-decided role / nepotism" /><span>Pre-decided role / nepotism</span></label>
+              <label class="rf-check"><input type="checkbox" value="Inappropriate interview questions" /><span>Inappropriate questions</span></label>
+              <label class="rf-check"><input type="checkbox" value="Refused to give feedback" /><span>Refused to give feedback</span></label>
+            </div>
+            <button type="submit" class="submit-btn">Submit Review →</button>
+          </div>
+        </form>
+
+        <div id="review-success" class="review-success hidden">
+          <div class="success-circle">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h3>Review filed.</h3>
+          <p>Anonymous. No email needed. It'll appear after a brief moderation check.</p>
+          <button class="step-btn" onclick="closeModal()">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
