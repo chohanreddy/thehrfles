@@ -1252,6 +1252,84 @@ button { font-family: var(--sans); cursor: pointer; }
 .rf-bar-track { height: 4px; background: var(--cream-3); border-radius: 4px; overflow: hidden; }
 .rf-bar-fill { height: 100%; background: var(--red); border-radius: 4px; transition: width 1.2s var(--ease); }
 
+/* === ABOUT === */
+.about-section {
+  padding: 8rem 0;
+  border-top: 1px solid var(--border-2);
+  border-bottom: 1px solid var(--border-2);
+}
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5rem;
+  margin-top: 3rem;
+  align-items: start;
+}
+.about-text p {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.85;
+  margin-bottom: 1.25rem;
+}
+.about-lead {
+  font-size: 1.1rem !important;
+  color: var(--text) !important;
+  font-weight: 500;
+}
+.about-mission {
+  display: flex;
+  gap: 1.25rem;
+  margin: 2rem 0;
+  align-items: flex-start;
+}
+.about-mission-line {
+  width: 3px;
+  min-height: 100%;
+  background: var(--red);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.about-mission-text {
+  font-family: var(--serif);
+  font-size: 1.05rem !important;
+  color: var(--text) !important;
+  line-height: 1.7 !important;
+  font-style: italic;
+  margin: 0 !important;
+}
+.about-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.about-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.2s;
+}
+.about-stat-card:hover { border-color: var(--red); }
+.asc-icon { color: var(--red); margin-bottom: 0.25rem; }
+.asc-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.asc-body {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+@media (max-width: 768px) {
+  .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+}
+
 /* === CTA === */
 .cta-section {
   background: var(--dark);
